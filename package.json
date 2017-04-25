@@ -1,0 +1,31 @@
+{
+    "name": "ui",
+    "version": "1.0.0",
+    "author": "Christof Kluss, Michael Hanus",
+    "maintainer": "Michael Hanus <mh@informatik.uni-kiel.de>",
+    "synopsis": "Libraries to implement declarative user interfaces",
+    "category": [ "User Interface" ],
+    "dependencies": {
+    },
+    "exportedModules": [ "UI", "UI2GUI", "UI2HTML", "GUI2HTML",
+                         "TypedUI2GUI", "TypedUI2HTML" ],
+    "compilerCompatibility": {
+        "pakcs": ">= 1.10.0, < 2.0.0"
+    },
+    "license": "BSD-3-Clause",
+    "licenseFile": "LICENSE",
+    "testsuite": [
+        { "src-dir": "src",
+          "options": "-v",
+          "modules":  [ "UI", "UI2GUI", "UI2HTML", "GUI2HTML" ]
+        },
+        { "src-dir": "examples",
+          "options": "-v",
+          "modules":  [ "calcui", "counter4", "counterui", "tcounter" ]
+        }
+    ],
+     "source": {
+        "git": "https://git.ps.informatik.uni-kiel.de/curry-packages/ui.git",
+        "tag": "$version"
+    }
+}
