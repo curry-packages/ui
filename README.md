@@ -4,7 +4,8 @@ ui: Declarative User Interfaces
 This directory contains the libraries to implement user interfaces
 as described in the paper
 
-M. Hanus, C. Kluss: Declarative Programming of User Interfaces
+M. Hanus, C. Kluss:
+[Declarative Programming of User Interfaces](http://dx.doi.org/10.1007/978-3-540-92995-6_2)
 Proc. of the 11th International Symposium on Practical Aspects of
 Declarative Languages (PADL'09), Springer LNCS 5418, pp. 16-30, 2009
 
