@@ -10,7 +10,8 @@
     "exportedModules": [ "UI", "UI2GUI", "UI2HTML", "GUI2HTML",
                          "TypedUI2GUI", "TypedUI2HTML" ],
     "compilerCompatibility": {
-        "pakcs": ">= 1.10.0, < 2.0.0"
+        "pakcs": ">= 1.10.0, < 2.0.0",
+        "kics2": ">= 0.5.0, < 2.0.0"
     },
     "license": "BSD-3-Clause",
     "licenseFile": "LICENSE",

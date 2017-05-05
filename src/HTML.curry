@@ -12,7 +12,8 @@
 --- the cgi script, `/home/joe/public_html/prog.cgi` is
 --- the desired location of the
 --- compiled cgi script, and `initialForm` is the Curry expression
---- (of type IO HtmlForm) computing the HTML.
+--- (of type IO HtmlForm) computing the HTML form (where `curry`
+--- is the shell command calling the Curry system PAKCS or KiCS2).
 ---
 --- @author Michael Hanus (with extensions by Bernd Brassel and Marco Comini)
 --- @version October 2016
@@ -64,7 +65,7 @@ import ReadNumeric  (readNat, readHex)
 import ReadShowTerm (showQTerm, readsQTerm)
 import System
 import Time
-import Unsafe(showAnyQExpression) -- to show status of cgi server
+--import Unsafe(showAnyQExpression) -- to show status of cgi server
 
 import Json
 
@@ -138,7 +139,7 @@ textOf = unwords . filter (not . null) . map textOfHtmlExp
 ---         is the content type (e.g., "text/plain") and c is the contents
 data HtmlForm =
         HtmlForm String [FormParam] [HtmlExp]
-      | HtmlAnswer String String -- content type (e.g., "text/plain") / content      
+      | HtmlAnswer String String -- content type (e.g., "text/plain") / content
       | AjaxAnswer Json [([(String,String)],[HtmlExp])]
 
 
@@ -1216,12 +1217,13 @@ serveCgiMessagesForForm servertimeout url cgikey portname
   serveCgiMessage state hdl ShowStatus =
     reportStatus state hdl showEventHandler
    where
-    showEventHandler (key,time,_,(_,handler),gkey) = do
+    showEventHandler (key,time,_,(_,_{-handler-}),gkey) = do
       ltime <- toCalendarTime time
       return $ "No. " ++ show key ++ " (" ++ showGroupKey gkey ++
                "), expires at " ++
                calendarTimeToString ltime ++ ": " ++
-               showAnyQExpression handler ++ "\n"
+               --showAnyQExpression handler ++ "\n"
+               "<sorry, can't show handler>\n"
 
   serveCgiMessage state hdl (CgiSubmit scriptenv formenv) = do
       let scriptkey = maybe "" id (lookup "SCRIPTKEY" scriptenv)
