@@ -1,13 +1,23 @@
 ui: Declarative User Interfaces
 ===============================
 
-This directory contains the libraries to implement user interfaces
-as described in the paper
+This package contains a collection of libraries
+to implement graphical user interfaces as well as
+web-based user interfaces from declarative descriptions.
+Exploiting these libraries, it is possible
+to define the structure and functionality of a user interface
+independent from the concrete technology.
+Thus, a graphical user interface or a web-based user interface
+can be generated from the same description by simply changing
+the name of the imported libraries.
+
+This programming technique is described in detail in this paper:
 
 M. Hanus, C. Kluss:
 [Declarative Programming of User Interfaces](http://dx.doi.org/10.1007/978-3-540-92995-6_2)
 Proc. of the 11th International Symposium on Practical Aspects of
 Declarative Languages (PADL'09), Springer LNCS 5418, pp. 16-30, 2009
+
 
 --------------------------------------------------------------------------
 
