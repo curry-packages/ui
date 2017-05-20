@@ -5,6 +5,15 @@
     "maintainer": "Michael Hanus <mh@informatik.uni-kiel.de>",
     "synopsis": "Libraries to implement declarative user interfaces",
     "category": [ "User Interface" ],
+    "description": "This package contains a collection of libraries
+to implement graphical user interfaces as well as
+web-based user interfaces from declarative descriptions.
+Exploiting these libraries, it is possible
+to define the structure and functionality of a user interface
+independent from the concrete technology.
+Thus, a graphical user interface or a web-based user interface
+can be generated from the same description by simply changing
+the name of the imported libraries.",
     "dependencies": {
     },
     "exportedModules": [ "UI", "UI2GUI", "UI2HTML", "GUI2HTML",
