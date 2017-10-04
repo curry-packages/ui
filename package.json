@@ -1,41 +1,38 @@
 {
-    "name": "ui",
-    "version": "2.0.0",
-    "author": "Christof Kluss, Michael Hanus",
-    "maintainer": "Michael Hanus <mh@informatik.uni-kiel.de>",
-    "synopsis": "Libraries to implement declarative user interfaces",
-    "category": [ "User Interface" ],
-    "description": "This package contains a collection of libraries
-to implement graphical user interfaces as well as
-web-based user interfaces from declarative descriptions.
-Exploiting these libraries, it is possible
-to define the structure and functionality of a user interface
-independent from the concrete technology.
-Thus, a graphical user interface or a web-based user interface
-can be generated from the same description by simply changing
-the name of the imported libraries.",
-    "dependencies": {
-    },
-    "exportedModules": [ "UI", "UI2GUI", "UI2HTML", "GUI2HTML",
-                         "TypedUI2GUI", "TypedUI2HTML" ],
-    "compilerCompatibility": {
-        "pakcs": ">= 2.0.0",
-        "kics2": ">= 2.0.0"
-    },
-    "license": "BSD-3-Clause",
-    "licenseFile": "LICENSE",
-    "testsuite": [
-        { "src-dir": "src",
-          "options": "-v",
-          "modules":  [ "UI", "UI2GUI", "UI2HTML", "GUI2HTML" ]
-        },
-        { "src-dir": "examples",
-          "options": "-v",
-          "modules":  [ "calcui", "counter4", "counterui", "tcounter" ]
-        }
-    ],
-     "source": {
-        "git": "https://git.ps.informatik.uni-kiel.de/curry-packages/ui.git",
-        "tag": "$version"
-    }
+  "name": "ui",
+  "version": "2.0.0",
+  "author": "Christof Kluss, Michael Hanus",
+  "maintainer": "Michael Hanus <mh@informatik.uni-kiel.de>",
+  "synopsis": "Libraries to implement declarative user interfaces",
+  "description": "This package contains a collection of libraries to implement graphical user interfaces as well as web-based user interfaces from declarative descriptions. Exploiting these libraries, it is possible to define the structure and functionality of a user interface independent from the concrete technology. Thus, a graphical user interface or a web-based user interface can be generated from the same description by simply changing the name of the imported libraries.",
+  "category": [ "User Interface" ],
+  "license": "BSD-3-Clause",
+  "licenseFile": "LICENSE",
+  "dependencies": {
+    "gui": " >= 2.0.0"
+  },
+  "compilerCompatibility": {
+    "pakcs": " >= 2.0.0",
+    "kics2": " >= 2.0.0"
+  },
+  "source": {
+    "git": "https://git.ps.informatik.uni-kiel.de/curry-packages/ui.git",
+    "tag": "$version"
+  },
+  "exportedModules": [ "UI"
+                     , "UI2GUI"
+                     , "UI2HTML"
+                     , "GUI2HTML"
+                     , "TypedUI2GUI"
+                     , "TypedUI2HTML" ],
+  "testsuite": [ {
+                 "src-dir": "src",
+                 "options": "-v",
+                 "modules": [ "UI", "UI2GUI", "UI2HTML", "GUI2HTML" ]
+               }
+               , {
+                 "src-dir": "examples",
+                 "options": "-v",
+                 "modules": [ "calcui", "counter4", "counterui", "tcounter" ]
+               } ]
 }
