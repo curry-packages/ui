@@ -15,6 +15,7 @@ Thus, a graphical user interface or a web-based user interface
 can be generated from the same description by simply changing
 the name of the imported libraries.",
     "dependencies": {
+        "gui": ">= 1.0.0"
     },
     "exportedModules": [ "UI", "UI2GUI", "UI2HTML", "GUI2HTML",
                          "TypedUI2GUI", "TypedUI2HTML" ],
