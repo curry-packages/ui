@@ -52,20 +52,21 @@ module HTML(HtmlExp(..),HtmlPage(..),PageParam(..),
             germanLatexDoc,htmlSpecialChars2tex,
             addSound,addCookies) where
 
-import Char
-import Directory    (getHomeDirectory)
+import Data.Char
+import Data.Time
+import Data.List
+import System.Directory    (getHomeDirectory)
+import System.Environment
+import System.Process
+import System.Random       (getRandomSeed, nextInt)
+--import System.IO.Unsafe(showAnyQExpression) -- to show status of cgi server
+import System.IO
 import Distribution (installDir)
 import HtmlCgi
-import IO
-import NamedSocket
-import List
-import Profile
-import Random       (getRandomSeed, nextInt)
-import ReadNumeric  (readNat, readHex)
+import Network.NamedSocket
+import Debug.Profile
+import Numeric  (readNat, readHex)
 import ReadShowTerm (showQTerm, readsQTerm)
-import System
-import Time
---import Unsafe(showAnyQExpression) -- to show status of cgi server
 
 import Json
 
@@ -869,7 +870,7 @@ addAttrs (HtmlCRef  hexp cref) attrs =
 
 addAttrs (AjaxEvent id handler) _ = AjaxEvent id handler
 addAttrs (AjaxEvent2 hexp handler str1 str2) attrs =
-    AjaxEvent2 (addAttrs hexp attrs) handler str1 str2  
+    AjaxEvent2 (addAttrs hexp attrs) handler str1 str2
 
 --- Adds a class attribute to an HTML element.
 addClass :: HtmlExp -> String -> HtmlExp
@@ -1029,14 +1030,14 @@ htmlTagAttrs = [("lang","en")]
 --- to decode and encode such parameters, respectively.
 
 getUrlParameter :: IO String
-getUrlParameter = getEnviron "QUERY_STRING"
+getUrlParameter = getEnv "QUERY_STRING"
 
 --- Translates urlencoded string into equivalent ASCII string.
 urlencoded2string :: String -> String
 urlencoded2string [] = []
 urlencoded2string (c:cs)
   | c == '+'  = ' ' : urlencoded2string cs
-  | c == '%'  = chr (maybe 0 fst (readHex (take 2 cs)))
+  | c == '%'  = chr (fst (head (readHex (take 2 cs))))
                  : urlencoded2string (drop 2 cs)
   | otherwise = c : urlencoded2string cs
 
@@ -1059,7 +1060,7 @@ string2urlencoded (c:cs)
 --- no other components are important here.
 getCookies :: IO [(String,String)]
 getCookies =
- do cookiestring <- getEnviron "HTTP_COOKIE"
+ do cookiestring <- getEnv "HTTP_COOKIE"
     return $ parseCookies cookiestring
 
 -- translate a string of cookies (of the form "NAME1=VAL1; NAME2=VAL")
@@ -1229,7 +1230,7 @@ serveCgiMessagesForForm servertimeout url cgikey portname
   serveCgiMessage state hdl (CgiSubmit scriptenv formenv) = do
       let scriptkey = maybe "" id (lookup "SCRIPTKEY" scriptenv)
       mapIO_ (\(var,val) -> if var=="SCRIPTKEY" then done
-                                                else setEnviron var val)
+                                                else setEnv var val)
              scriptenv
       if null formenv -- initial form?
        then serveFormInEnv state scriptkey initform []
@@ -1349,12 +1350,12 @@ showAnswerFormInEnv _ _ (HtmlAnswer ctype cont) _ = do
 
 showAnswerFormInEnv _ _ (AjaxAnswer cont nvsAndhexps) crefnr = do
   (pairs,evhs) <- converttohtml ([],[]) nvsAndhexps crefnr
- 
-  let jsonpairs = map (\ (nvs,html) -> 
-                          Object ((map (\ (n,v) -> (n,String v)) nvs) ++ 
-                                  [("html",String html)]) ) pairs 
- 
-  return ("Content-Type: text/json\n\n" ++ 
+
+  let jsonpairs = map (\ (nvs,html) ->
+                          Object ((map (\ (n,v) -> (n,String v)) nvs) ++
+                                  [("html",String html)]) ) pairs
+
+  return ("Content-Type: text/json\n\n" ++
     (showJson $ Object [("content",cont),("popups",Array jsonpairs)]),evhs)
 
 
@@ -1363,9 +1364,9 @@ converttohtml :: ([(a,String)],[(HtmlHandler,String)])
               -> IO ([(a, String)], [(HtmlHandler,String)])
 converttohtml (xs,evhs) [] _                  = return (xs,evhs)
 converttohtml (xs,evhs) ((nvs,hexp):ys) crefnr = do
-  (htmlstring,newevhs,newrefnr) <- htmlForm2html_ hexp crefnr 
+  (htmlstring,newevhs,newrefnr) <- htmlForm2html_ hexp crefnr
   converttohtml ((nvs,(showHtmlExps htmlstring)):xs,evhs++newevhs) ys newrefnr
-  
+
 ------------------------------------------------------------------------------
 
 htmlForm2html_ :: [HtmlExp] -> Int
@@ -1391,7 +1392,7 @@ addHtmlContentType htmlstring =
 showHtmlFormInEnv :: String -> String -> HtmlForm -> Int
                      -> IO (String,[(HtmlHandler,String)])
 showHtmlFormInEnv url key (HtmlForm ftitle fparams fhexp) crefnr = do
-  qstr <- getEnviron "QUERY_STRING"
+  qstr <- getEnv "QUERY_STRING"
   --putStrLn (showHtmlExps [pre [par (env2html cenv),hrule]]) --debug
   (title,params,hexps,firsthandler,evhs) <-
     htmlForm2html (HtmlForm ftitle fparams fhexp) crefnr
@@ -1422,8 +1423,8 @@ extractCookies (HtmlForm title params hexp) =
       in case fparam of
            FormCookie n v ps -> ((n,v,ps):cs,ops)
            _                 -> (cs,fparam:ops)
-           
-           
+
+
 extractCookies (AjaxAnswer x y) = ("",AjaxAnswer x y)
 
 -- get the EVENT_ definition of the cgi environment
@@ -1445,7 +1446,9 @@ getMaxFieldNr ((name,_):env) =
 
 -- try to read a natural number in a string or return first argument:
 tryReadNat :: Int -> String -> Int
-tryReadNat d s = maybe d (\(i,rs)->if null rs then i else d) (readNat s)
+tryReadNat d s = case readNat s of
+  [(i, "")] -> i
+  _         -> d
 
 -- get the value assigned to a name in a given cgi environment
 cgiGetValue :: [(String,String)] -> CgiRef -> String
@@ -1491,13 +1494,13 @@ numberCgiRefs (HtmlCRef hexp (CgiRef ref) : hexps) i
 numberCgiRefs (AjaxEvent id handler: hexps) i =
    let (nhexps,j) = numberCgiRefs hexps i
    in (AjaxEvent id handler : nhexps, j)
-  
+
 
 numberCgiRefs (AjaxEvent2 hexp handler str1 str2 : hexps) i =
    let (nhexps1,j)  = numberCgiRefs [hexp] i
        (nhexps2,k) = numberCgiRefs hexps j
    in (AjaxEvent2 (head nhexps1) handler str1 str2 : nhexps2, k)
-   
+
 
 -- translate all event handlers into their internal form:
 -- (assumption: all CgiRefs have already been instantiated and eliminated)
@@ -1522,36 +1525,36 @@ translateHandlers (HtmlEvent (HtmlStruct tag attrs hes) handler : hexps) =
    in (HtmlStruct tag (changeAssoc attrs "name" ("EVENT_" ++ fh)) hes : nhexps,
        (handler,key):evhs, fh)
  where key free
- 
- 
-translateHandlers (AjaxEvent key handler : hexps) =   
+
+
+translateHandlers (AjaxEvent key handler : hexps) =
  let (nhexps,evhs,_) = translateHandlers hexps
      fh = string2urlencoded key
   in (nhexps, (handler,key):evhs, fh)
 
 translateHandlers (AjaxEvent2 hexp handler str1 str2 : hexps) =
   let (nhexps1,evhs1,_) = translateHandlers [hexp]
-      (nhexps2,evhs2,_) = translateHandlers hexps      
+      (nhexps2,evhs2,_) = translateHandlers hexps
       fh = string2urlencoded key
-      
-      changeAttr (HtmlStruct tag attrs hes) = 
+
+      changeAttr (HtmlStruct tag attrs hes) =
         if null str2
           then HtmlStruct tag (changeAssoc attrs str1 ("EVENT_" ++ fh)) hes
           else HtmlStruct tag
-                 (changeAssoc attrs str1 
+                 (changeAssoc attrs str1
                       (str2 ++ "(event,window,'EVENT_" ++ fh ++ "');")) hes
-      
-      
+
+
       changeAttr (AjaxEvent2 he hdlr s1 s2) =
-        AjaxEvent2 (changeAttr he) hdlr s1 s2 
-      changeAttr (HtmlEvent he hdlr) = HtmlEvent (changeAttr he) hdlr   
-      
+        AjaxEvent2 (changeAttr he) hdlr s1 s2
+      changeAttr (HtmlEvent he hdlr) = HtmlEvent (changeAttr he) hdlr
+
       --changeAttr (HtmlCRef he ref)      = HtmlCRef  (changeAttr he) ref
-      --changeAttr (HtmlText str)           = HtmlText str        
-      
+      --changeAttr (HtmlText str)           = HtmlText str
+
    in (changeAttr (head nhexps1) : nhexps2,(handler,key):evhs1++evhs2, fh)
 
- where key free 
+ where key free
 
 
 
@@ -1937,7 +1940,7 @@ intFormMain :: String -> String -> String -> String ->
               Bool -> String -> IO HtmlForm -> IO ()
 intFormMain baseurl basecgi reldir cginame forever urlparam hformact = do
   pid      <- getPID
-  user     <- getEnviron "USER"
+  user     <- getEnv "USER"
   home     <- getHomeDirectory
   let portname = "intcgi_" ++ show pid
   socket <- listenOn portname
@@ -1949,7 +1952,7 @@ intFormMain baseurl basecgi reldir cginame forever urlparam hformact = do
                 (if null reldir  then "" else reldir ++"/") ++ cgiprogname
       cgikey = url++" 42"
   installShowCgiEnvScript portname cgifile
-  setEnviron "QUERY_STRING" urlparam
+  setEnv "QUERY_STRING" urlparam
   time <- getClockTime
   intFormInEnv url cgikey hformact hformact [] (initialServerState time)
                forever socket
@@ -1982,7 +1985,7 @@ intFormInEnv url cgikey initform hformact cenv state forever socket = do
    intFormProceed nstate hdl (CgiSubmit scriptenv newcenv) = do
     hPutStrLn hdl answerTxt
     hClose hdl
-    mapIO_ (\ (var,val) -> setEnviron var val) scriptenv
+    mapIO_ (\ (var,val) -> setEnv var val) scriptenv
     if null newcenv -- call to initial script?
      then intFormInEnv url cgikey initform initform [] nstate forever socket
      else do

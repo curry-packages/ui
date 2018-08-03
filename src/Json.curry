@@ -6,7 +6,7 @@
 --- @author Sebastian Fischer
 module Json ( Json(..), trJson, readJson, showJson ) where
 
-import Char
+import Data.Char
 import Parse
 import ReadShowTerm
 
@@ -20,22 +20,22 @@ data Json
  deriving (Eq,Show)
 
 --- Universal transformation for JSON values.
-trJson :: ([(String, a)] -> a) 
+trJson :: ([(String, a)] -> a)
        -> ([a] -> a)
        -> (String -> a)
        -> (Int -> a)
        -> (Bool -> a)
        -> a
-       -> Json 
+       -> Json
        -> a
 
-trJson object array string int bool null (Object ms) 
+trJson object array string int bool null (Object ms)
   = object (map member ms)
  where
   member (key, value)
     = (key, (trJson object array string int bool null) value)
 
-trJson object array string int bool null (Array vs) 
+trJson object array string int bool null (Array vs)
   = array (map (trJson object array string int bool null) vs)
 
 trJson _ _ string _ _ _ (String s) = string s
@@ -72,7 +72,7 @@ spaceP :: Parser Char String
 spaceP s = [span isSpace s]
 
 listP :: Show a => Parser Char a -> Parser Char [a]
-listP p s 
+listP p s
   = case (p <.> spaceP) s of
       [] -> [([],s)]
       [(v,',':s1)] -> update (v:) (spaceP <:> listP p) s1
@@ -93,7 +93,7 @@ valueP s = case s of
   't':'r':'u':'e':cs -> [(Bool True,cs)]
   'f':'a':'l':'s':'e':cs -> [(Bool False,cs)]
   'n':'u':'l':'l':cs -> [(Null,cs)]
-  c:cs -> if isDigit c || c=='-' && isDigit (head cs) 
+  c:cs -> if isDigit c || c=='-' && isDigit (head cs)
            then update Int readsQTerm s else []
   _ -> []
 
@@ -101,5 +101,3 @@ memberP :: Parser Char (String, Json)
 memberP
   = spaceP <:> (stringP <*> \key ->
                 update (\val -> (key,val)) (spaceP <:> terminal ':' <:> jsonP))
-
-

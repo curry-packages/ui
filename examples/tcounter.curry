@@ -5,7 +5,6 @@
 --import TypedUI2GUI
 import TypedUI2HTML
 
-
 counters :: [Int] -> UIWidget
 counters xs =
    col [label "A list of counters:",
@@ -17,10 +16,10 @@ counters xs =
     sval free
 
     (widget,getval,setval,updval) = typedui2ui (wList wInt) xs
-  
+
     compute env = do cs <- getval env
                      setValue sval (maybe "" (show . sum) cs) env
-  
+
 
 main = runUI "Counters" (counters [1..4])
 

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --- Library for creating web applications from ui descriptions
 --- with combinators you can create your own widgets
---- Ideas and parts of documentation from PAKCS WUI library  
+--- Ideas and parts of documentation from PAKCS WUI library
 --- @author Christof Kluss
 --- @version September 2008
 ------------------------------------------------------------------------------
@@ -25,20 +25,19 @@ module TypedUI2HTML (
   typedui2ui,typeduistore2ui,runUISpec,
   module UI2HTML,
   -- only supported for UI2HTML
-  wRadioSelect,wuiHandler2button,wuiInForm,wui2html,mainWUI,resultForm 
+  wRadioSelect,wuiHandler2button,wuiInForm,wui2html,mainWUI,resultForm
 ) where
 
 
-import Read(readNat)
-import List(elemIndex)
-import Maybe
-import Char(isDigit,isSpace)
-import FunctionInversion(invf1)
+import Data.List(elemIndex)
+import Data.Maybe
+import Data.Char(isDigit,isSpace)
+import Data.Function.Inversion(invf1)
 import ReadShowTerm
-
-import qualified HTML 
-import UI2HTML
 import IOExts
+
+import qualified HTML
+import UI2HTML
 
 infixl 0 `withRendering`
 infixl 0 `withError`
@@ -74,13 +73,13 @@ conditionOf (_,_,c) = c
 --- The second component is a "show" function returning an UI Widget,
 --- a "read" function and a "set" function
 --- The "read" function extract the values from the Widget.
---- If the value is not legal, Nothing is returned. 
+--- If the value is not legal, Nothing is returned.
 data UISpec a =
   UISpec (UIParams a)
          (UIParams a -> a -> (UIWidget,
                               UIEnv -> IO (Maybe a),
-                              a -> UIEnv -> IO ())) 
-          
+                              a -> UIEnv -> IO ()))
+
 ------------------------------------------------------------------------------
 
 --- Puts a new rendering function into a UI specification.
@@ -100,7 +99,7 @@ withConditionIO (UISpec (render,errmsg,_) show) legal =
 
 --- Puts a new condition into a UI specification.
 withCondition :: UISpec a -> (a -> Bool) -> UISpec a
-withCondition wspec legal  = 
+withCondition wspec legal  =
   withConditionIO wspec (\a -> return $ legal a)
 
 -- A collection of basic UIs and UI combinators:
@@ -122,14 +121,14 @@ removeCRs (c1:c2:cs) =
 transformWSpec :: (a->b,b->a) -> UISpec a -> UISpec b
 transformWSpec (a2b,b2a) (UISpec wparamsa showuia) =
   UISpec (transParam b2a wparamsa)
-          (\wparamsb b -> showWidget wparamsb b)         
+          (\wparamsb b -> showWidget wparamsb b)
  where
-  showWidget wparamsb b = 
+  showWidget wparamsb b =
     let (widgetb,reada,seta) = showuia (transParam a2b wparamsb) (b2a b)
 
         readb env = do mba <- reada env
-                       return $ maybe Nothing (Just . a2b) mba       
-        setb val env = seta (b2a val) env 
+                       return $ maybe Nothing (Just . a2b) mba
+        setb val env = seta (b2a val) env
 
     in (widgetb,readb,setb)
 
@@ -148,7 +147,7 @@ adaptWSpec a2b = transformWSpec (a2b, invf1 a2b)
 hideErrorLabel lref env     = do setValue lref "" env
                                  setVisible lref False env
 showErrorLabel lref msg env = do setValue lref msg env
-                                 setVisible lref True env 
+                                 setVisible lref True env
 
 --- A widget for editing integer values.
 wInt :: UISpec Int
@@ -162,23 +161,23 @@ wInt =
 
       widget = col [
         labelS [errorStyle, Class [Display False]] "" `setRef` errorref,
-        entryS [Class [NameValue "size" "6"]] ref (show v) 
-          --`addHandlers` 
+        entryS [Class [NameValue "size" "6"]] ref (show v)
+          --`addHandlers`
           --  [Handler FocusOut (Cmd (\env -> readval env >> done))]
         ]
 
       readval env = do
         val <- getValue ref env
         let mbn = readMaybeInt (stripSpaces val)
-        if mbn == Nothing 
-          then do showErrorLabel errorref "Illegal integer:" env 
+        if mbn == Nothing
+          then do showErrorLabel errorref "Illegal integer:" env
                   return Nothing
           else do
             b <- legal (fromJust mbn)
             if b then do hideErrorLabel errorref env
                          return mbn
-                 else do showErrorLabel errorref errmsg env 
-                         return Nothing         
+                 else do showErrorLabel errorref errmsg env
+                         return Nothing
 
       setval val env = do hideErrorLabel errorref env
                           setValue ref (show val) env
@@ -200,7 +199,7 @@ readMaybeInt (v:s) | v=='-'  = maybe Nothing (\i->Just (-i)) (acc 0 s)
                | otherwise = Nothing
 
 --- A widget for values that are shown but cannot be modified.
---- The first argument is a mapping of the value into a UI Widget 
+--- The first argument is a mapping of the value into a UI Widget
 --- to show this value.
 wConstant :: (a->UIWidget) -> UISpec a
 wConstant showui =
@@ -217,38 +216,38 @@ wHidden =
   UISpec (head,"?",const $ return True) -- dummy values, not used
           (\_ v -> (label " ",const $ return (Just v),\ _ _ -> done))
 
---- A widget for editing string values 
+--- A widget for editing string values
 wStringStyles :: [StyleClass] -> UISpec (String)
 wStringStyles styles =
   UISpec (head, "?", const $ return True)
-          (\wparams v -> stringWidget wparams v) 
+          (\wparams v -> stringWidget wparams v)
  where
   stringWidget (render,errmsg,legal) v = (render [widget],readval,setval)
-    where    
+    where
       ref, errorref free
 
       widget = col [
           labelS [errorStyle] "" `setRef` errorref,
-          entryS styles ref v 
-          -- `addHandlers` 
+          entryS styles ref v
+          -- `addHandlers`
           --  [Handler FocusOut (Cmd (\env -> readval env >> done))]
         ]
 
       readval env = do
-        val <- getValue ref env 
+        val <- getValue ref env
         b <- legal val
-        if b then do hideErrorLabel errorref env 
+        if b then do hideErrorLabel errorref env
                      return (Just val)
              else do showErrorLabel errorref errmsg env
                      return Nothing
 
       setval val env = do setValue errorref "" env
                           setValue ref val env
---- A widget for editing string values 
+--- A widget for editing string values
 wString :: UISpec (String)
 wString = wStringStyles []
 
---- A widget for editing string values 
+--- A widget for editing string values
 wStringSize :: Int -> UISpec (String)
 wStringSize size = wStringStyles [Class [NameValue "size" (show size)]]
 
@@ -273,21 +272,21 @@ errorStyle :: StyleClass
 errorStyle = Class [Fg Red, Font Bold]
 
 showError :: ErrorRefs -> Maybe String -> UIEnv -> IO ()
-showError errorref mberrmsg env | 
+showError errorref mberrmsg env |
   ErrorRefs (labelref,colref) =:= errorref =
-  case mberrmsg of 
+  case mberrmsg of
     Just errmsg -> do showErrorLabel labelref errmsg env
                       setErrorBg labelref True env
                       setErrorBg colref True env
     Nothing     -> do hideErrorLabel labelref env
                       setErrorBg labelref False env
-                      setErrorBg colref False env 
+                      setErrorBg colref False env
   where labelref,colref free
 
 renderError :: UIWidget -> ErrorRefs -> UIWidget
-renderError widget errorref | ErrorRefs (labelref,colref) =:= errorref = 
-        col [labelS  [Class [Fg Red, Font Bold,  Display False]] "" 
-               `setRef` labelref, 
+renderError widget errorref | ErrorRefs (labelref,colref) =:= errorref =
+        col [labelS  [Class [Fg Red, Font Bold,  Display False]] ""
+               `setRef` labelref,
              widget] `setRef` colref
   where labelref,colref free
 
@@ -345,8 +344,8 @@ w11Tuple = wCons11 (\a b c d e f g h i j k -> (a,b,c,d,e,f,g,h,i,j,k))
 --- for the argument types.
 
 wCons2 :: (Eq a, Eq b) => (a -> b -> c) -> UISpec a -> UISpec b -> UISpec c
-wCons2 cons (UISpec rendera showa ) (UISpec renderb showb ) =  
-  UISpec (renderTuple, tupleError, const $ return True) showc 
+wCons2 cons (UISpec rendera showa ) (UISpec renderb showb ) =
+  UISpec (renderTuple, tupleError, const $ return True) showc
  where
   showc  (render,errmsg,legal) vc | cons va vb =:<= vc =
      (renderError (render [hea,heb]) errorref,readc,setc)
@@ -385,9 +384,9 @@ wTextArea (rows,cols) = UISpec (head, "?", const $ return True)
  where
    textareaWidget (render,errmsg,legal) v = ((render [widget]),readval,setval)
     where
-      ref, errorlabel free 
+      ref, errorlabel free
       widget = row [labelS [errorStyle] "" `setRef` errorlabel,
-                    textEdit ref v rows cols 
+                    textEdit ref v rows cols
                       `addHandlers` [Handler FocusOut (Cmd cmd)]]
         where cmd env = readval env >> done
 
@@ -397,7 +396,7 @@ wTextArea (rows,cols) = UISpec (head, "?", const $ return True)
         if b
           then do setValue errorlabel "" env
                   return (Just val)
-          else do setValue errorlabel errmsg env 
+          else do setValue errorlabel errmsg env
                   return Nothing
 
       setval val env = do setValue errorlabel "" env
@@ -410,7 +409,7 @@ wList (UISpec rendera showa) =
           (\wparams vas ->
               (listWidget wparams (unzip3 (map (showa rendera) vas))))
     where
-      listWidget (render,errmsg,legal) (hes,readvals,setvals) = 
+      listWidget (render,errmsg,legal) (hes,readvals,setvals) =
         (renderError (render hes) errorref, readval, setval)
         where
           errorref free
@@ -418,28 +417,28 @@ wList (UISpec rendera showa) =
           readval env = do
             mbvals <- mapIO (\r -> r env) readvals
 
-            if foldl (||) False (map (\v -> v == Nothing) mbvals)       
+            if foldl (||) False (map (\v -> v == Nothing) mbvals)
               then do showError errorref Nothing env
                       return Nothing
-              else do let value = (map fromJust mbvals) 
+              else do let value = (map fromJust mbvals)
                       b <- legal value
                       if b
-                        then do showError errorref Nothing env 
+                        then do showError errorref Nothing env
                                 return (Just value)
                         else do showError errorref (Just errmsg) env
                                 return Nothing
 
-          setval vals env = do 
-            showError errorref Nothing env      
+          setval vals env = do
+            showError errorref Nothing env
             mapIO_ (\ (set,val) -> set val env)  (zip setvals vals)
 
--- standard rendering of lists 
+-- standard rendering of lists
 renderList :: Rendering
 renderList = col
 
 --- A widget to select a list of values from a given list of values
 --- via check boxes.
---- The current values should be contained in the value list and are 
+--- The current values should be contained in the value list and are
 --- preselected.
 --- The first argument is a mapping from values into HTML expressions
 --- that are shown for each item after the check box.
@@ -450,33 +449,33 @@ wMultiCheckSelect showelem selset =
  where
   refs = take (length selset) newVars
 
-  checkWidget (render,errmsg,legal) vs = 
+  checkWidget (render,errmsg,legal) vs =
      (renderError (render (map showItem numsetitems))
                   errorref,readval,setval)
     where
       errorref free
 
       numsetitems = zip refs selset
-      showItem (ref,s) = 
+      showItem (ref,s) =
         row ((simpleCheckButton ref "" (s `elem` vs)):(showelem s))
 
       readval env = do
         vals <- mapIO (\r -> getValue r env) refs
-        let selected = concatMap (\ (sel,s) -> if sel == "1" then [s] else []) 
-                        (zip vals selset) 
+        let selected = concatMap (\ (sel,s) -> if sel == "1" then [s] else [])
+                        (zip vals selset)
 
         b <- legal selected
-        if b then do showError errorref Nothing env 
+        if b then do showError errorref Nothing env
                      return (Just selected)
-             else do showError errorref (Just errmsg) env 
+             else do showError errorref (Just errmsg) env
                      return Nothing
 
       setval vals env = do
-        showError errorref Nothing env 
+        showError errorref Nothing env
         mapIO_ (\ref -> setValue ref "0" env) refs
         mapIO_ (\val -> do let mbidx = elemIndex val selset
-                           maybe (done) 
-                                 (\n -> setValue (refs!!n) "1" env) 
+                           maybe (done)
+                                 (\n -> setValue (refs!!n) "1" env)
                                  mbidx) vals
 
 newVars :: [_]
@@ -497,11 +496,11 @@ wSelect showelem selset =
                                idx]),readval,setval)
     where
       ref free
-      idx = elemIndex v selset      
-      items = (map showelem selset) 
+      idx = elemIndex v selset
+      items = (map showelem selset)
 
       readval env = do val <- getValue ref env
-                       return (Just (selset!!(readNat val)))
+                       return (Just (selset!!(read val)))
 
       setval val env = do let midx = elemIndex val selset
                           maybe (done) (\n -> setValue ref (show n) env) midx
@@ -549,15 +548,15 @@ typedui2ui (UISpec wparams show) val = (widget,getval,setval,updval)
   where
     (widget,getval,setval) = show wparams val
     updval upd env = do mbn <- getval env
-                        maybe (done) (\n -> setval (upd n) env) mbn 
+                        maybe (done) (\n -> setval (upd n) env) mbn
 
 --- Generates HTML editors and a handler from a WUI data specification,
 --- an initial value and an update form.
-typeduistore2ui :: UISpec a -> a -> (a -> UIEnv -> IO ()) -> 
+typeduistore2ui :: UISpec a -> a -> (a -> UIEnv -> IO ()) ->
                                                     (UIWidget,UIEnv -> IO ())
 typeduistore2ui (UISpec wparams show) val store = (ui,handler)
   where
-    (ui,getval,_) = show wparams val 
+    (ui,getval,_) = show wparams val
     handler env = do mbval <- getval env
                      maybe (done) (\v -> store v env) mbval
 
@@ -577,10 +576,10 @@ runUISpec uispec val store = do
 wRadioSelect :: Eq a => (a->[UIWidget]) -> [a] -> UISpec a
 wRadioSelect showelem selset =
   UISpec (renderTuple, tupleError, const $ return True)
-          (\wparams v -> radioWidget wparams v)        
+          (\wparams v -> radioWidget wparams v)
  where
 
-  radioWidget (render,_,_) v = 
+  radioWidget (render,_,_) v =
     (render (map showItem numhitems),readval,setval)
     where
       ref free
@@ -592,7 +591,7 @@ wRadioSelect showelem selset =
 
       readval env = do
         val <- getValue ref env
-        return (Just (selset!!(readNat val)))
+        return (Just (selset!!(read val)))
 
       setval val env = do
         maybe (done) (\n -> setValue ref (show n) env) (elemIndex val selset)
@@ -615,11 +614,11 @@ wuiInForm uispec val store userform = return $ userform ui (WHandler read)
 wui2html :: UISpec a -> a -> (a -> IO HTML.HtmlForm) ->
                                                      (UIWidget,UIEnv -> IO ())
 wui2html (UISpec wparams show) val store = (ui,read)
-  where 
+  where
     (ui,readval,_) = show wparams val
     read env = do
       mbval <- readval env
-      maybe (done) 
+      maybe (done)
             (\v -> do hform <- store v
                       nextHtmlForm hform env)
             mbval
@@ -642,7 +641,7 @@ wCons3 :: (Eq a, Eq b, Eq c) =>
           (a->b->c->d) -> UISpec a -> UISpec b -> UISpec c -> UISpec d
 wCons3 cons (UISpec rendera showa) (UISpec renderb showb)
             (UISpec renderc showc) =
-  UISpec (renderTuple, tupleError, const $ return True) showd 
+  UISpec (renderTuple, tupleError, const $ return True) showd
  where
   showd (render,errmsg,legal) vd | cons va vb vc =:<= vd =
     (renderError (render [hea,heb,hec]) errorref,readd,setd)
@@ -652,24 +651,24 @@ wCons3 cons (UISpec rendera showa) (UISpec renderb showb)
 
      (hea,reada,seta) = showa rendera va
      (heb,readb,setb) = showb renderb vb
-     (hec,readc,setc) = showc renderc vc   
+     (hec,readc,setc) = showc renderc vc
 
      readd env = do
-        rav <- reada env 
-        rbv <- readb env 
-        rcv <- readc env 
+        rav <- reada env
+        rbv <- readb env
+        rcv <- readc env
 
-        if rav==Nothing || rbv==Nothing || rcv==Nothing 
+        if rav==Nothing || rbv==Nothing || rcv==Nothing
           then do showError errorref Nothing env
                   return Nothing
           else do
             let value = cons (fromJust rav) (fromJust rbv) (fromJust rcv)
             b <- legal value
             if b
-              then do showError errorref Nothing env 
+              then do showError errorref Nothing env
                       return (Just value)
-              else do showError errorref (Just errmsg) env 
-                      return Nothing 
+              else do showError errorref (Just errmsg) env
+                      return Nothing
 
      setd nvd env | cons nva nvb nvc =:<= nvd = do
          showError errorref Nothing env
@@ -689,7 +688,7 @@ wCons4 cons
  where
   showe (render,errmsg,legal) ve | cons va vb vc vd =:<= ve =
      (renderError (render [hea,heb,hec,hed]) errorref,reade,sete)
-    where 
+    where
       va,vb,vc,vd free
       errorref free
       (hea,reada,seta) = showa wparama va
@@ -707,8 +706,8 @@ wCons4 cons
          then do showError errorref Nothing env
                  return Nothing
          else do
-           let value = cons (fromJust rav) (fromJust rbv) 
-                            (fromJust rcv) (fromJust rdv) 
+           let value = cons (fromJust rav) (fromJust rbv)
+                            (fromJust rcv) (fromJust rdv)
            b <- legal value
            if b then do showError errorref Nothing env
                         return (Just value)
@@ -716,24 +715,24 @@ wCons4 cons
                         return Nothing
 
       sete nve env | cons nva nvb nvc nvd =:<= nve = do
-         showError errorref Nothing env  
+         showError errorref Nothing env
          seta nva env
          setb nvb env
          setc nvc env
          setd nvd env
-       where nva, nvb, nvc, nvd free 
+       where nva, nvb, nvc, nvd free
 
 wCons5 :: (Eq a, Eq b, Eq c, Eq d, Eq e) =>
           (a -> b -> c -> d -> e -> f) -> UISpec a -> UISpec b -> UISpec c ->
              UISpec d -> UISpec e -> UISpec f
 wCons5 cons (UISpec wparama showa) (UISpec wparamb showb)
             (UISpec wparamc showc) (UISpec wparamd showd)
-            (UISpec wparame showe) 
+            (UISpec wparame showe)
  = UISpec (renderTuple,tupleError, const $ return True) showh
  where
   showh (render,errmsg,legal) vf | cons va vb vc vd ve =:<= vf =
      (renderError (render [hea,heb,hec,hed,hee]) errorref,readf,setf)
-    where 
+    where
       va,vb,vc,vd,ve free
       errorref free
       (hea,reada,seta) = showa wparama va
@@ -749,17 +748,17 @@ wCons5 cons (UISpec wparama showa) (UISpec wparamb showb)
         rdv <- readd env
         rev <- reade env
 
-        if rav==Nothing || rbv==Nothing || rcv==Nothing || 
-           rdv==Nothing || rev==Nothing 
+        if rav==Nothing || rbv==Nothing || rcv==Nothing ||
+           rdv==Nothing || rev==Nothing
           then do showError errorref Nothing env
                   return Nothing
           else do
             let value = cons (fromJust rav) (fromJust rbv) (fromJust rcv)
                              (fromJust rdv) (fromJust rev)
             b <- legal value
-            if b then do showError errorref Nothing env 
+            if b then do showError errorref Nothing env
                          return (Just value)
-                 else do showError errorref (Just errmsg) env 
+                 else do showError errorref (Just errmsg) env
                          return Nothing
 
       setf nvf env | cons nva nvb nvc nvd nve =:<= nvf = do
@@ -769,7 +768,7 @@ wCons5 cons (UISpec wparama showa) (UISpec wparamb showb)
          setc nvc env
          setd nvd env
          sete nve env
-       where nva, nvb, nvc, nvd, nve free 
+       where nva, nvb, nvc, nvd, nve free
 
 wCons6 :: (Eq a, Eq b, Eq c, Eq d, Eq e, Eq f) =>
           (a -> b -> c -> d -> e -> f -> g) -> UISpec a -> UISpec b ->
@@ -782,7 +781,7 @@ wCons6 cons
  where
   showh (render,errmsg,legal) vg | cons va vb vc vd ve vf =:<= vg =
      (renderError (render [hea,heb,hec,hed,hee,hef]) errorref,readg,setg)
-    where 
+    where
       va,vb,vc,vd,ve,vf free
       errorref free
       (hea,reada,seta) = showa wparama va
@@ -801,7 +800,7 @@ wCons6 cons
         rfv <- readf env
 
         if rav==Nothing || rbv==Nothing || rcv==Nothing || rdv==Nothing ||
-           rev==Nothing || rfv==Nothing  
+           rev==Nothing || rfv==Nothing
 
          then do showError errorref Nothing env
                  return Nothing
@@ -812,32 +811,32 @@ wCons6 cons
            b <- legal value
            if b then do showError errorref Nothing env
                         return (Just value)
-                else do showError errorref (Just errmsg) env 
+                else do showError errorref (Just errmsg) env
                         return Nothing
 
       setg nvg env | cons nva nvb nvc nvd nve nvf =:<= nvg = do
-         showError errorref Nothing env  
+         showError errorref Nothing env
          seta nva env
          setb nvb env
          setc nvc env
          setd nvd env
          sete nve env
          setf nvf env
-       where nva, nvb, nvc, nvd, nve, nvf free 
+       where nva, nvb, nvc, nvd, nve, nvf free
 
 wCons7 :: (Eq a, Eq b, Eq c, Eq d, Eq e, Eq f, Eq g) =>
           (a -> b -> c -> d -> e -> f -> g -> h) -> UISpec a -> UISpec b ->
         UISpec c -> UISpec d -> UISpec e -> UISpec f -> UISpec g -> UISpec h
 wCons7 cons
         (UISpec wparama showa) (UISpec wparamb showb)
-        (UISpec wparamc showc) (UISpec wparamd showd) 
-        (UISpec wparame showe) (UISpec wparamf showf) 
-        (UISpec wparamg showg) 
+        (UISpec wparamc showc) (UISpec wparamd showd)
+        (UISpec wparame showe) (UISpec wparamf showf)
+        (UISpec wparamg showg)
  = UISpec (renderTuple,tupleError, const $ return True) showh
  where
   showh (render,errmsg,legal) vh | cons va vb vc vd ve vf vg =:<= vh =
      (renderError (render [hea,heb,hec,hed,hee,hef,heg]) errorref,readh,seth)
-    where 
+    where
       va,vb,vc,vd,ve,vf,vg free
       errorref free
       (hea,reada,seta) = showa wparama va
@@ -858,7 +857,7 @@ wCons7 cons
         rgv <- readg env
 
         if rav==Nothing || rbv==Nothing || rcv==Nothing || rdv==Nothing ||
-           rev==Nothing || rfv==Nothing || rgv==Nothing 
+           rev==Nothing || rfv==Nothing || rgv==Nothing
           then do showError errorref Nothing env
                   return Nothing
           else do
@@ -868,7 +867,7 @@ wCons7 cons
             b <- legal value
             if b then do showError errorref Nothing env
                          return (Just value)
-                 else do showError errorref (Just errmsg) env 
+                 else do showError errorref (Just errmsg) env
                          return Nothing
 
       seth nvh env | cons nva nvb nvc nvd nve nvf nvg =:<= nvh = do
@@ -880,11 +879,11 @@ wCons7 cons
          sete nve env
          setf nvf env
          setg nvg env
-       where nva, nvb, nvc, nvd, nve, nvf, nvg free 
+       where nva, nvb, nvc, nvd, nve, nvf, nvg free
 
 
 wCons8 :: (Eq a, Eq b, Eq c, Eq d, Eq e, Eq f, Eq g, Eq h) =>
-          (a -> b -> c -> d -> e -> f -> g -> h -> i) -> UISpec a -> 
+          (a -> b -> c -> d -> e -> f -> g -> h -> i) -> UISpec a ->
    UISpec b -> UISpec c -> UISpec d -> UISpec e -> UISpec f -> UISpec g ->
    UISpec h -> UISpec i
 wCons8 cons
@@ -898,7 +897,7 @@ wCons8 cons
   showi (render,errmsg,legal) vi | cons va vb vc vd ve vf vg vh =:<= vi =
      (renderError (render [hea,heb,hec,hed,hee,hef,heg,heh])
       errorref,readi,seti)
-    where 
+    where
       va,vb,vc,vd,ve,vf,vg,vh free
       errorref free
       (hea,reada,seta) = showa wparama va
@@ -921,7 +920,7 @@ wCons8 cons
         rhv <- readh env
 
         if rav==Nothing || rbv==Nothing || rcv==Nothing || rdv==Nothing ||
-           rev==Nothing || rfv==Nothing || rgv==Nothing || rhv==Nothing 
+           rev==Nothing || rfv==Nothing || rgv==Nothing || rhv==Nothing
           then do showError errorref Nothing env
                   return Nothing
           else do
@@ -944,7 +943,7 @@ wCons8 cons
          setf nvf env
          setg nvg env
          seth nvh env
-       where nva, nvb, nvc, nvd, nve, nvf, nvg, nvh free 
+       where nva, nvb, nvc, nvd, nve, nvf, nvg, nvh free
 
 
 wCons11 :: (Eq a, Eq b, Eq c, Eq d, Eq e, Eq f, Eq g, Eq h, Eq i, Eq j, Eq k) =>
@@ -963,7 +962,7 @@ wCons11 cons
          cons va vb vc vd ve vf vg vh vi vj vk =:<= vl =
      (renderError (render [hea,heb,hec,hed,hee,hef,heg,heh,hei,hej,hek])
                   errorref,readl,setl)
-    where 
+    where
       va,vb,vc,vd,ve,vf,vg,vh,vi,vj,vk free
       errorref free
       (hea,reada,seta) = showa wparama va
@@ -993,7 +992,7 @@ wCons11 cons
 
         if rav==Nothing || rbv==Nothing || rcv==Nothing || rdv==Nothing ||
            rev==Nothing || rfv==Nothing || rgv==Nothing || rhv==Nothing ||
-           riv==Nothing || rjv==Nothing || rkv==Nothing 
+           riv==Nothing || rjv==Nothing || rkv==Nothing
          then do showError errorref Nothing env
                  return Nothing
          else do
@@ -1002,9 +1001,9 @@ wCons11 cons
                             (fromJust rgv) (fromJust rhv) (fromJust riv)
                             (fromJust rjv) (fromJust rkv)
            b <- legal value
-           if b then do showError errorref Nothing env 
+           if b then do showError errorref Nothing env
                         return (Just value)
-                else do showError errorref (Just errmsg) env 
+                else do showError errorref (Just errmsg) env
                         return Nothing
 
       setl nvl env |
@@ -1021,4 +1020,4 @@ wCons11 cons
         seti nvi env
         setj nvj env
         setk nvk env
-       where nva, nvb, nvc, nvd, nve, nvf, nvg, nvh, nvi, nvj, nvk free 
+       where nva, nvb, nvc, nvd, nve, nvf, nvg, nvh, nvi, nvj, nvk free

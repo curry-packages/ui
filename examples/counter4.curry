@@ -6,8 +6,6 @@
 import UI2GUI  -- to compile with a GUI implementation
 --import UI2HTML -- to compile with a web implementation
 
-import Read
-
 counterUI :: UIWidget
 counterUI = col [label "A simple counter:",
                  entry val "0" `addStyle` Class [Bg White],
@@ -17,10 +15,10 @@ counterUI = col [label "A simple counter:",
  where
    val free
 
-   reset env = setValue val "0" env  
+   reset env = setValue val "0" env
 
    inc env = do v <- getValue val env
-                setValue val (show (readInt v + 1)) env
+                setValue val (show (read v + 1)) env
 
 
 counter4 = col [row [counterUI,counterUI],

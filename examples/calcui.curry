@@ -6,8 +6,8 @@
 import UI2GUI  -- to compile with a GUI implementation
 --import UI2HTML -- to compile with a web implementation
 
-import Char
-import IOExts -- use IORefs for the GUI state 
+import Data.Char
+import IOExts -- use IORefs for the GUI state
 
 -- the GUI needs a reference to the calculator state
 calcUI :: IORef (Int,Int->Int) -> UIWidget
@@ -40,7 +40,7 @@ processButton b (d,f)
  | b=='C' = (0, id)
 
 main = do
-  stateref <- newIORef (0,id)  
+  stateref <- newIORef (0,id)
   runUI "Calculator" (calcUI stateref)
 
 -- Generate web interface (`import UI2HTML`) with

@@ -14,7 +14,7 @@
 module GUI(GuiPort,Widget(..),Button,ConfigButton,
            TextEditScroll,ListBoxScroll,CanvasScroll,EntryScroll,
            ConfItem(..),ReconfigureItem(..),
-           Cmd,Command,   
+           Cmd,Command,
            Event(..),ConfCollection(..),MenuItem(..),
            CanvasItem(..),WidgetRef, Style(..), Color(..),
            col,row,matrix,
@@ -30,12 +30,11 @@ module GUI(GuiPort,Widget(..),Button,ConfigButton,
            chooseColor,popupMessage,debugTcl,
            cmd,command,button)  where
 
-import Char   (isSpace, toUpper)
-import IO
-import IOExts (connectToCommand)
-import Read
-import System (system)
-import Unsafe (trace)
+import Data.Char        (isSpace, toUpper)
+import System.IO
+import System.IO.Unsafe (trace)
+import System.Process   (system)
+import IOExts           (connectToCommand)
 
 -- If showTclTkErrors is true, all synchronization errors occuring in the
 -- Tcl/Tk communication are shown (such errors should only occur on
@@ -95,9 +94,9 @@ data Widget = PlainButton            [ConfItem]
             | Row    [ConfCollection] [Widget]
             | Col    [ConfCollection] [Widget]
             | Matrix [ConfCollection] [[Widget]]
-            -- 
+            --
             | RowC   [ConfCollection] [ConfItem] [Widget]
-            | ColC    [ConfCollection] [ConfItem] [Widget]            
+            | ColC    [ConfCollection] [ConfItem] [Widget]
 
 --- The data type for possible configurations of a widget.
 --- @cons Active    - define the active state for buttons, entries, etc.
@@ -130,12 +129,12 @@ data ConfItem =
  | Height Int
  | CheckInit String
  | CanvasItems [CanvasItem]
- | List [String]   
- | Menu [MenuItem] 
- | WRef WidgetRef  
- | Text String     
- | Width Int       
- | Fill | FillX | FillY           
+ | List [String]
+ | Menu [MenuItem]
+ | WRef WidgetRef
+ | Text String
+ | Width Int
+ | Fill | FillX | FillY
  | TclOption String
  | Display Bool
 
@@ -225,7 +224,7 @@ data CanvasItem = CLine [(Int,Int)] String
 --- The (hidden) data type of references to a widget in a GUI window.
 --- Note that the constructor WRefLabel will not be exported so that values
 --- can only be created inside this module.
---- @cons WRefLabel label type - 
+--- @cons WRefLabel label type -
 ---       "label" is the (globally unique) identifier of
 ---       this widget used in Tk, and "type" is one of
 ---       button / canvas / checkbutton / entry / label / listbox /
@@ -244,7 +243,7 @@ wRef2Wtype (WRefLabel _ wtype) = wtype
 data Style = Bold | Italic | Underline | Fg Color | Bg Color
 
 --- The data type of possible colors.
-data Color 
+data Color
   = Black | Blue | Brown | Cyan | Gold | Gray | Green | Magenta | Navy | Orange
   | Pink | Purple | Red | Tomato| Turquoise | Violet | White | Yellow
 
@@ -484,13 +483,13 @@ widget2tcl label (Row confs ws) = case widgets2tcl label 97 ws of
      (snd $ foldl (\ (n,g) l->(n+1,g++"grid "++label++labelIndex2string (96+n)
                                     ++" -row 1 -column "++show n++" "
                                     ++confCollection2tcl confs
-                                    ++gridInfo2tcl n label "col" l ++ "\n")) 
+                                    ++gridInfo2tcl n label "col" l ++ "\n"))
                   (1,"")
                   wsGridInfo),
      wsevs)
  where
    wsGridInfo = widgets2gridinfo ws
-        
+
 
 widget2tcl label (Col confs ws) = case widgets2tcl label 97 ws of
    (wstcl,wsevs) ->
@@ -508,8 +507,8 @@ widget2tcl label (Col confs ws) = case widgets2tcl label 97 ws of
  where
    wsGridInfo = widgets2gridinfo ws
 
-widget2tcl label (Matrix confs ws) = 
-  ((if label == "" then "wm resizable . " ++ resizeBehavior wsGridInfo++"\n" 
+widget2tcl label (Matrix confs ws) =
+  ((if label == "" then "wm resizable . " ++ resizeBehavior wsGridInfo++"\n"
     else "frame "++label++"\n") ++ wstcl,wsevs)
 
   where
@@ -520,19 +519,19 @@ widget2tcl label (Matrix confs ws) =
 
 widget2tcl label (RowC confs confitems ws) =
   ((if label=="" then "wm resizable . " ++ resizeBehavior wsGridInfo++"\n"
-    else "frame "++label++"\n" ++ conf_tcl ++ "\n") ++   
+    else "frame "++label++"\n" ++ conf_tcl ++ "\n") ++
    wstcl ++
    (snd $ foldl (\ (n,g) l->(n+1,g++"grid "++label ++ labelIndex2string (96+n)
                                   ++" -row 1 -column "++show n++" "
                                   ++confCollection2tcl confs
-                                  ++gridInfo2tcl n label "col" l ++ "\n")) 
+                                  ++gridInfo2tcl n label "col" l ++ "\n"))
                 (1,"")
                 wsGridInfo),
    conf_evs ++ wsevs)
   where (wstcl,wsevs) = widgets2tcl label 97 ws
         (conf_tcl,conf_evs) = configs2tcl "row" label confitems
         wsGridInfo = widgets2gridinfo ws
-        
+
 
 widget2tcl label (ColC confs confitems ws) =
   ((if label=="" then "wm resizable . " ++ resizeBehavior wsGridInfo++"\n"
@@ -546,16 +545,16 @@ widget2tcl label (ColC confs confitems ws) =
                    (widgets2gridinfo ws)),
       conf_evs ++ wsevs)
   where (wstcl,wsevs) = widgets2tcl label 97 ws
-        (conf_tcl,conf_evs) = configs2tcl "col" label confitems  
+        (conf_tcl,conf_evs) = configs2tcl "col" label confitems
         wsGridInfo = widgets2gridinfo ws
-        
+
 
 -- actual translation function of the list of lists of widgets in a matrix
-matrix2tcl :: Int -> Int -> String -> [ConfCollection] 
+matrix2tcl :: Int -> Int -> String -> [ConfCollection]
                     -> [[Widget]] -> (String,[EventHandler])
 matrix2tcl _ _ _ _ [] = ("",[])
 matrix2tcl nextLabel n label confs (ws:wss) =
-   (wstcl ++ 
+   (wstcl ++
    (snd $ foldl (\ (m,g) l->(m+1,g++"grid "++label
                                   ++labelIndex2string (nextLabel+m-1)
                                   ++" -row "++show n ++" -column "++show m++" "
@@ -579,13 +578,13 @@ widgets2gridinfo [] = []
 widgets2gridinfo (w:ws) =
     (tclfill ++ getConfs w): widgets2gridinfo ws
  where
-  fillx    = hasFillX w 
-  filly    = hasFillY w 
-  flexible = hasFill  w 
+  fillx    = hasFillX w
+  filly    = hasFillY w
+  flexible = hasFill  w
   tclfill  = if flexible || (fillx && filly) then [Fill] else
              if fillx then [FillX] else
              if filly then [FillY] else []
-             
+
 hasFillX w = any isFillX (propagateFillInfo w)
 
 hasFillY w = any isFillY (propagateFillInfo w)
@@ -647,7 +646,7 @@ confCollection2tcl (BottomAlign : confs) = "-sticky s " ++ confCollection2tcl co
 
 -- translate the Fill - options to sticky options and grid configures
 gridInfo2tcl :: Int -> String -> String -> [ConfItem] -> String
-gridInfo2tcl n label "col" confs 
+gridInfo2tcl n label "col" confs
   | any isFill confs || (any isFillX confs && any isFillY confs)
   = "-sticky nsew \ngrid columnconfigure "++lab++" "++show n++
     " -weight 1\ngrid rowconfigure "++lab++" 1 -weight 1"
@@ -659,7 +658,7 @@ gridInfo2tcl n label "col" confs
   where
     lab = if label=="" then "." else label
 
-gridInfo2tcl n label "row" confs 
+gridInfo2tcl n label "row" confs
   | any isFill confs || (any isFillX confs && any isFillY confs)
   = "-sticky nsew \ngrid columnconfigure "++lab++
     " 1 -weight 1\ngrid rowconfigure "++lab++" "++show n++" -weight 1"
@@ -740,11 +739,11 @@ config2tcl wtype label (Height h)
  | otherwise
   = label++" configure -height "++show h++"\n"
 
--- show/hide widget 
+-- show/hide widget
 config2tcl _ label (Display b)
   = if b then "grid " ++ label ++ "\n"
          else "grid remove " ++ label ++ "\n"
-    
+
 
 -- value of checkbuttons:
 config2tcl wtype label (CheckInit s)
@@ -802,7 +801,7 @@ config2tcl wtype label (Width w)
  | otherwise = label++" configure -width "++show w++"\n"
 
 -- configuration options for widget composition are ignored here
--- since they are used during geometry management 
+-- since they are used during geometry management
 config2tcl _ _ Fill = ""
 config2tcl _ _ FillX = ""
 config2tcl _ _ FillY = ""
@@ -815,7 +814,7 @@ config2tcl _ label (TclOption tcloptions)
 -- translation of a menu with a given label:
 menu2tcl label menu =
   "menu "++label++" -tearoff false\n" ++
-  label++" delete 0 end\n" ++ 
+  label++" delete 0 end\n" ++
   setmenuelems menu 0
  where setmenuelems [] _ = ""
        setmenuelems (MButton _ text : es) i =
@@ -858,7 +857,7 @@ configs2tcl wtype label confs =
 
 -- translate a list of canvas items into a Tcl string:
 canvasItems2tcl _ [] = ""
-canvasItems2tcl label (i:is) = 
+canvasItems2tcl label (i:is) =
    canvasItem2tcl label i ++ canvasItems2tcl label is
 
 canvasItem2tcl label (CLine coords opts) =
@@ -881,7 +880,7 @@ canvasItem2tcl label (COval (x1,y1) (x2,y2) opts) =
   concatMap (\x->"set"++refname++"_scrollx "++show x++"\n") [x1,x2] ++
   concatMap (\y->"set"++refname++"_scrolly "++show y++"\n") [y1,y2]
     where refname = wLabel2Refname label
-canvasItem2tcl label (CText (x,y) text opts) = 
+canvasItem2tcl label (CText (x,y) text opts) =
   label++ " create text "++show x++" "++show y++
           " -text \""++escapeTcl text++"\" "++opts++"\n"++
   "set"++refname++"_scrollx "++show (x+5*(length text))++"\n"++
@@ -924,7 +923,7 @@ mainWidget2tcl widget =
 
 --- Prints the generated Tcl commands of a main widget (useful for debugging).
 debugTcl :: Widget -> IO ()
-debugTcl widget = putStrLn (fst (mainWidget2tcl widget))  
+debugTcl widget = putStrLn (fst (mainWidget2tcl widget))
 
 
 ------------------------------------------------------------------------
@@ -1163,14 +1162,14 @@ initSchedule widget gport exths initcmd = do
   confs <- initcmd gport
   -- add handler on wish connection as first handler:
   configAndProceedScheduler evs gport
-                   (IOHandler (handleOf gport,processTkEvent) : exths) 
+                   (IOHandler (handleOf gport,processTkEvent) : exths)
                    (Just confs)
  where
   (tcl,evs) = mainWidget2tcl widget
 
 
 
-defaultBgColor = 
+defaultBgColor =
    "label .foo\n" ++
    "set defaultBgColor [.foo cget -background]\n" ++
    "destroy .foo \n"
@@ -1188,7 +1187,7 @@ scheduleTkEvents evs gport exthds = do
   (i,hdl) <- choiceOverHandles (map fst iohandlers)
   if i<0 then done
          else snd (iohandlers!!i) evs hdl gport >>=
-              configAndProceedScheduler evs gport exthds 
+              configAndProceedScheduler evs gport exthds
  where
   iohandlers = map (\ (IOHandler x) -> x) exthds
 
@@ -1263,7 +1262,7 @@ toIOHandler handler _ handle gport = handler handle gport >>= return . Just
 --- (deprecated operation, only included for backward compatibility).
 --- Warning: does not work for Command options!
 setConfig :: WidgetRef -> ConfItem -> GuiPort -> IO ()
-setConfig (WRefLabel var wtype) confitem gport = 
+setConfig (WRefLabel var wtype) confitem gport =
   send2tk (config2tcl wtype (wRefname2Label var) confitem) gport
 
 
@@ -1290,7 +1289,7 @@ getWidgetVarMsg var gport =
   receiveFromTk gport >>= \varmsg ->
   if takeWhile (/='%') varmsg == ":VAR"++var
   then let (len,value) = break (=='*') (tail (dropWhile (/='%') varmsg))
-        in getWidgetVarValue (readNat len) (tail value) gport
+        in getWidgetVarValue (read len) (tail value) gport
   else do reportTclTkError ("ERROR in getWidgetVar \""++var++"\": Received: "
                             ++varmsg++"\n")
           getWidgetVarMsg var gport -- ignore other messages and try again
@@ -1333,12 +1332,12 @@ exitGUI gport = send2tk "exit" gport -- this also terminates the scheduler
 
 --- Gets the (String) value of a variable in a GUI.
 getValue :: WidgetRef -> GuiPort -> IO String
-getValue (WRefLabel var _) gport = 
+getValue (WRefLabel var _) gport =
   getWidgetVar var gport
 
 --- Sets the (String) value of a variable in a GUI.
 setValue :: WidgetRef -> String -> GuiPort -> IO ()
-setValue (WRefLabel var _) val gport = 
+setValue (WRefLabel var _) val gport =
   send2tk ("setvar"++var++" \""++escapeTcl val++"\"") gport
 
 --- Updates the (String) value of a variable w.r.t. to an update function.
@@ -1358,9 +1357,9 @@ appendValue (WRefLabel var wtype) val gport =
 
 --- Appends a String value with style tags to the contents of a TextEdit widget
 --- and adjust the view to the end of the TextEdit widget.
---- Different styles can be combined, e.g., to get bold blue text on a 
---- red background. If <code>Bold</code>, <code>Italic</code> and 
---- <code>Underline</code> are combined, currently all but one of these are 
+--- Different styles can be combined, e.g., to get bold blue text on a
+--- red background. If <code>Bold</code>, <code>Italic</code> and
+--- <code>Underline</code> are combined, currently all but one of these are
 --- ignored.
 --- This is an experimental function and might be changed in the future.
 appendStyledValue :: WidgetRef -> String -> [Style] -> GuiPort -> IO ()
@@ -1377,9 +1376,9 @@ appendStyledValue (WRefLabel var wtype) val styles gport =
 --- Adds a style value in a region of a TextEdit widget.
 --- The region is specified a start and end position similarly
 --- to <code>getCursorPosition</code>.
---- Different styles can be combined, e.g., to get bold blue text on a 
---- red background. If <code>Bold</code>, <code>Italic</code> and 
---- <code>Underline</code> are combined, currently all but one of these are 
+--- Different styles can be combined, e.g., to get bold blue text on a
+--- red background. If <code>Bold</code>, <code>Italic</code> and
+--- <code>Underline</code> are combined, currently all but one of these are
 --- ignored.
 --- This is an experimental function and might be changed in the future.
 addRegionStyle :: WidgetRef -> (Int,Int) -> (Int,Int) -> Style -> GuiPort
@@ -1414,7 +1413,7 @@ getCursorPosition (WRefLabel var wtype) gport =
   else do send2tk ("puts [ "++wRefname2Label var++" index insert ]") gport
           line <- receiveFromTk gport
           let (ls,ps) = break (=='.') line
-          return (if null ps then (0,0) else (readNat ls, readNat (tail ps)))
+          return (if null ps then (0,0) else (read ls, read (tail ps)))
 
 
 --- Adjust the view of a TextEdit widget so that the specified line/column
