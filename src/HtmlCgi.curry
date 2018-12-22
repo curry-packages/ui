@@ -7,26 +7,27 @@
 --- server implementing the application.
 ---
 --- @author Michael Hanus
---- @version September 2012
---- @category web
+--- @version December 2018
 ------------------------------------------------------------------------------
 
-module HtmlCgi(CgiServerMsg(..),runCgiServerCmd,
-               cgiServerRegistry,registerCgiServer,unregisterCgiServer,
-               readCgiServerMsg,noHandlerPage,submitForm)
-  where
+module HtmlCgi
+  ( CgiServerMsg(..), runCgiServerCmd
+  , cgiServerRegistry, registerCgiServer, unregisterCgiServer
+  , readCgiServerMsg, noHandlerPage, submitForm
+  ) where
 
 import System
 import Char
-import NamedSocket
-import CPNS(unregisterPort)
 import IO
-import IOExts(exclusiveIO,connectToCommand)
-import Directory(doesFileExist,getCurrentDirectory)
+import IOExts       ( exclusiveIO, connectToCommand )
+import Directory    ( doesFileExist, getCurrentDirectory )
 import ReadNumeric
 import ReadShowTerm
 import Time
 import List
+
+import Network.CPNS ( unregisterPort )
+import Network.NamedSocket
 
 --------------------------------------------------------------------------
 -- Should the log messages of the server stored in a log file?

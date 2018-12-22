@@ -16,8 +16,7 @@
 --- is the shell command calling the Curry system PAKCS or KiCS2).
 ---
 --- @author Michael Hanus (with extensions by Bernd Brassel and Marco Comini)
---- @version October 2016
---- @category web
+--- @version December 2018
 ------------------------------------------------------------------------------
 
 {-# OPTIONS_CYMAKE -Wno-incomplete-patterns #-}
@@ -57,7 +56,6 @@ import Directory    (getHomeDirectory)
 import Distribution (installDir)
 import HtmlCgi
 import IO
-import NamedSocket
 import List
 import Profile
 import Random       (getRandomSeed, nextInt)
@@ -68,6 +66,7 @@ import Time
 --import Unsafe(showAnyQExpression) -- to show status of cgi server
 
 import Json
+import Network.NamedSocket
 
 
 infixl 0 `addAttr`
