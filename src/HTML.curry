@@ -58,7 +58,6 @@ import HtmlCgi
 import IO
 import List
 import Profile
-import Random       (getRandomSeed, nextInt)
 import ReadNumeric  (readNat, readHex)
 import ReadShowTerm (showQTerm, readsQTerm)
 import System
@@ -67,6 +66,7 @@ import Time
 
 import Json
 import Network.NamedSocket
+import System.Random       (getRandomSeed, nextInt)
 
 
 infixl 0 `addAttr`
