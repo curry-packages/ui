@@ -1,7 +1,8 @@
 module SpicyWeb where  
   
+import Data.Traversal 
 import Json 
-import Traversal 
+
 import UI(Ref(..))
 import HTML(CgiRef(..))
 
