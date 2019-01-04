@@ -57,7 +57,6 @@ import Distribution (installDir)
 import HtmlCgi
 import IO
 import List
-import Profile
 import ReadNumeric  (readNat, readHex)
 import ReadShowTerm (showQTerm, readsQTerm)
 import System
@@ -2078,11 +2077,9 @@ getServerStatus :: ServerState -> IO String
 getServerStatus state@(stime,maxkey,_,evs) = do
   busy   <- getServerLoad state
   lstime <- toCalendarTime stime
-  pinfos <- getProcessInfos
   return $ "Status: " ++ busy ++ ", Maxkey: "++show maxkey ++ ", #Handlers: " ++
            show (length evs) ++ ", Start time: " ++
-           calendarTimeToString lstime ++ "\n" ++
-           showMemInfo pinfos
+           calendarTimeToString lstime ++ "\n"
 
 --- Shows the group key of a handler as a string.
 showGroupKey :: Maybe Int -> String
