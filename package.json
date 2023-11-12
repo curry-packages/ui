@@ -20,7 +20,7 @@
     "kics2": " >= 2.0.0"
   },
   "source": {
-    "git": "https://git.ps.informatik.uni-kiel.de/curry-packages/ui.git",
+    "git": "https://github.com/curry-packages/ui.git",
     "tag": "$version"
   },
   "exportedModules": [ "UI"
